@@ -1,14 +1,38 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: sentryflow
+  name: {{ .Values.sentryflow.configmap.name | default "sentryflow" }}
+  namespace: {{ .Values.sentryflow.namespace | default "sentryflow" }} # Namespace from values, fallback to "default"
   labels:
     {{- include "sentryflow.labels" . | nindent 4 }}
     {{- with .Values.genericLabels }}
-        {{- toYaml . | nindent 4 }}
-    {{- end }}
-{{- with .Values.config }}
-data:
-  config.yaml: |2-
     {{- toYaml . | nindent 4 }}
-{{- end }}
+    {{- end }}
+data:
+  config.yaml: |-
+    filters:
+      server:
+        port: {{ .Values.sentryflow.serverPort | default 8001 }}
+    {{- if eq .Values.sentryflow.receivers.enabled "nginx" }}
+      nginxIngress:
+        deploymentName: {{ .Values.sentryflow.receivers.nginx.deploymentName | default "nginx-ingress-controller" }}
+        configMapName: {{ .Values.sentryflow.receivers.nginx.configMapName | default "nginx-ingress" }}
+        sentryFlowNjsConfigMapName: {{ .Values.sentryflow.configmap.name | default "sentryflow" }}
+
+      receivers:
+        others:
+          - name: nginx-inc-ingress-controller
+            namespace: {{ .Values.sentryflow.receivers.nginx.namespace | default "default" }}
+
+    {{- else if eq .Values.sentryflow.receivers.enabled "istio" }}
+      envoy:
+        uri: {{ .Values.sentryflow.receivers.istio.envoyUri | default "5gsec/sentryflowflow-httpfilter:v0.1" }}
+
+      receivers:
+        serviceMeshes:
+          - name: istio-sidecar
+            namespace: {{ .Values.sentryflow.receivers.istio.namespace | default "istio-system" }}
+    {{- end }}
+    exporter:
+      grpc:
+        port: {{ .Values.sentryflow.exporterPort | default 8888 }}

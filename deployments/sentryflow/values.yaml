@@ -31,7 +31,7 @@ serviceAccount:
   automount: true
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: ""
+  name: "sentryflow"
 
 genericLabels:
   app.kubernetes.io/part-of: sentryflow
@@ -46,7 +46,7 @@ securityContext:
       - ALL
   readOnlyRootFilesystem: true
   runAsNonRoot: true
-  runAsUser: 1000
+  runAsUser: 1111
   allowPrivilegeEscalation: false
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
@@ -55,12 +55,12 @@ service:
   type: ClusterIP
   ports:
     - name: exporter
-      port: 8888 # Make sure to use the same port as `.exporter.grpc.port` field of `config`
-      targetPort: 8888  # Make sure to use the same port as `.filters.server.port` field of `config`
+      port: 8080
+      targetPort: 8080
       protocol: TCP
-    - name: receiver
-      port: 9999 # Make sure to use the same port as `.filters.server.port` field of `config`
-      targetPort: 9999 # Make sure to use the same port as `.filters.server.port` field of `config`
+    - name: filter-server
+      port: 8081 # Make sure to use the same port as `.filters.server.port` field in configMap
+      targetPort: 8081 # Make sure to use the same port as `.filters.server.port` field in configMap
       protocol: TCP
 
 resources:
@@ -97,9 +97,11 @@ autoscaling:
 
 # Traffic sources configuration
 config:
-  filters:
-    server:
-      port: 9999
+  # receivers:
+  #   enabled: istio # Options: nginx, istio
+  # filters:
+  #   server:
+  #     port: 9999
 
     # Envoy filter is required for `istio-sidecar` service-mesh receiver.
     # Uncomment the following if you want to use `istio-sidecar` traffic source
@@ -113,7 +115,7 @@ config:
   #    configMapName: nginx-ingress
   #    sentryFlowNjsConfigMapName: sentryflow-njs
 
-  receivers: # aka sources
+  # receivers: # aka sources
     # Uncomment the following receivers according to your requirement.
 #    serviceMeshes:
       # To get API observability from Istio service mesh uncomment the following
@@ -127,9 +129,9 @@ config:
 
   #    - name: nginx-webserver
 
-  exporter:
-    grpc:
-      port: 8888
+  # exporter:
+  #   grpc:
+  #     port: 8888
 
 volumes:
   - name: sentryflow
